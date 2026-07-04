@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // sqlite locally AND on Turso/libSQL for serverless deploy.
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Currency is a real table so every aggregate can normalize to a base (USD).
+// This is what makes "how do we pay people across countries" answerable.
+model Currency {
+  code      String     @id // ISO 4217, e.g. "USD", "INR"
+  name      String
+  symbol    String
+  rateToUsd Float // 1 unit of this currency = rateToUsd USD. Seeded/static.
+  employees Employee[]
+}
+
+model Employee {
+  id             String   @id @default(cuid())
+  employeeCode   String   @unique // e.g. "ACME-000123"
+  firstName      String
+  lastName       String
+  email          String   @unique
+  country        String
+  department     String
+  jobTitle       String
+  level          String // L1..L6
+  baseSalary     Float // local currency (prod-correct = integer minor units; flagged in requirements)
+  currencyCode   String
+  employmentType String   @default("FULL_TIME") // FULL_TIME | PART_TIME | CONTRACT
+  status         String   @default("ACTIVE") // ACTIVE | ON_LEAVE | TERMINATED
+  hireDate       DateTime
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  currency Currency @relation(fields: [currencyCode], references: [code])
+
+  // Index every field we filter or GROUP BY on — the point of "server-side, 10k rows".
+  @@index([country])
+  @@index([department])
+  @@index([level])
+  @@index([currencyCode])
+  @@index([status])
+}
