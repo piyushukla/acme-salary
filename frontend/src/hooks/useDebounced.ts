@@ -1,0 +1,11 @@
+import { useEffect, useState } from "react";
+
+// Debounce a rapidly-changing value so we don't hit the API on every keystroke.
+export function useDebounced<T>(value: T, delay = 350): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(id);
+  }, [value, delay]);
+  return debounced;
+}
